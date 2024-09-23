@@ -46,6 +46,13 @@ class StreamNotification(commands.Cog):
                     return True
                 return False
 
+    @commands.command(name='setlivechannel')
+    async def set_channel(self, ctx, channel: commands.TextChannelConverter):
+        """Sets the channel where live notifications will be sent."""
+        self.notification_channel_id = channel.id
+        self.save_channel_id(channel.id)  # Save the channel ID to a file
+        await ctx.send(f"Live notifications will be sent to {channel.mention}")
+
     @commands.command(name='addstreamer')
     async def add_streamer(self, ctx, twitch_username: str):
         """Add a Twitch streamer to the watch list."""
@@ -84,10 +91,11 @@ class StreamNotification(commands.Cog):
                 # If the stream is live and wasn't already live
                 if is_live and not self.live_streams.get(streamer_name, False):
                     self.live_streams[streamer_name] = True  # Mark as live
-                    # Send notification to Discord channel
-                    channel = nextcord.utils.get(self.bot.get_all_channels(), name='stream-notifications')
-                    if channel:
-                        await channel.send(f"@everyone, {streamer_name} is now live! Watch here: https://www.twitch.tv/{streamer_name}")
+                    # Send notification to the specified channel
+                    if self.notification_channel_id:
+                        channel = self.bot.get_channel(self.notification_channel_id)
+                        if channel:
+                            await channel.send(f"@everyone, {streamer_name} is now live! Watch here: https://www.twitch.tv/{streamer_name}")
 
                 # If the stream is not live anymore, reset the live status
                 elif not is_live and self.live_streams.get(streamer_name, False):
