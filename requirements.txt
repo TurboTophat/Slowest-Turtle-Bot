@@ -1,3 +1,6 @@
 nextcord==2.1.0  # Version of nextcord you're using, adjust based on your version
 aiohttp==3.8.1   # For making async HTTP requests (Twitch API)
 python-dotenv==1.0.0  # If you're using dotenv for environment variables (optional)
+pytz==2023.3            # For timezone handling (latest version)
+asyncio==3.4.3          # For asynchronous operations (standard in Python 3.7+, but specify if needed)
+yt-dlp==2023.9.24       # For downloading videos (latest version)
