@@ -4,3 +4,7 @@ apikeys.py
 channel_config.json
 TEMP.py
 .cache
+
+# Ignore compiled Python files
+__pycache__/
+*.pyc
