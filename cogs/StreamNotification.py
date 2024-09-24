@@ -1,7 +1,6 @@
 import os
 from apikeys import TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
 from nextcord.ext import tasks, commands
-from nextcord import Embed
 import aiohttp
 import json
 
@@ -32,7 +31,7 @@ class StreamNotification(commands.Cog):
                 self.auth_token = data['access_token']
 
     async def is_stream_live(self, streamer_name):
-        """Check if a Twitch streamer is live and return viewer count."""
+        """Check if a Twitch streamer is live."""
         headers = {
             'Client-ID': self.twitch_client_id,
             'Authorization': f'Bearer {self.auth_token}',
@@ -43,10 +42,7 @@ class StreamNotification(commands.Cog):
                 headers=headers
             ) as response:
                 data = await response.json()
-                if data['data']:  # Stream is live if there's data
-                    stream_info = data['data'][0]
-                    return True, stream_info['viewer_count']
-            return False, 0
+                return bool(data['data'])  # Stream is live if there's data
 
     @commands.command(name='setlivechannel')
     async def set_channel(self, ctx, channel: commands.TextChannelConverter):
@@ -81,35 +77,25 @@ class StreamNotification(commands.Cog):
         if not self.auth_token:
             await self.get_twitch_token()
 
+        # Loop through each registered streamer
         for streamer_name in self.streamers:
-            is_live, viewer_count = await self.is_stream_live(streamer_name)
+            is_live = await self.is_stream_live(streamer_name)
 
             # If the stream is live and wasn't already marked as live
-        if is_live and not self.live_streams.get(streamer_name, False):
-            self.live_streams[streamer_name] = True  # Mark as live
-            await self.notify_live(streamer_name, viewer_count)
+            if is_live and not self.live_streams.get(streamer_name, False):
+                self.live_streams[streamer_name] = True  # Mark as live
+                await self.notify_live(streamer_name)
 
-        # If the stream is no longer live, reset live status
-        elif not is_live and self.live_streams.get(streamer_name, False):
-            self.live_streams[streamer_name] = False  # Mark as not live
+            # If the stream is no longer live, reset live status
+            elif not is_live and self.live_streams.get(streamer_name, False):
+                self.live_streams[streamer_name] = False  # Mark as not live
 
-    async def notify_live(self, streamer_name, viewer_count):
-        """Notify the channel that a streamer has gone live using an embed with viewer count."""
+    async def notify_live(self, streamer_name):
+        """Notify the channel that a streamer has gone live."""
         if self.notification_channel_id:
             channel = self.bot.get_channel(self.notification_channel_id)
             if channel:
-                # Create a new embed with hex color
-                embed = Embed(
-                title=f"{streamer_name} is now live on Twitch!",
-                description=f"Watch the stream [here](https://www.twitch.tv/{streamer_name})!",
-                color=0x9b59b6  # Hexadecimal color for the embed
-            )
-            embed.set_thumbnail(url="https://static-cdn.jtvnw.net/jtv_user_pictures/twitch_profile_image.png")
-            embed.add_field(name="Current Viewers", value=f"{viewer_count} viewers", inline=False)
-            embed.set_footer(text="Go support your favorite streamer!")
-
-            # Send the embed to the channel
-            await channel.send(content="@everyone", embed=embed)
+                await channel.send(f"@everyone, {streamer_name} is now live! Watch here: https://www.twitch.tv/{streamer_name}")
 
     # Save the notification channel ID to a file
     def save_channel_id(self, channel_id):
